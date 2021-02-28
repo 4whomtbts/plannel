@@ -1,19 +1,40 @@
-import paramiko
 import configparser
 import logging
 import re
 from server import Server
 from docker_client import DockerClient
+from plannel_config import PlannelConfig
 
-conf = configparser.ConfigParser()
-conf.read("plannel_conf.ini")
-conf_subject="plannel"
-plannel_conf = conf[conf_subject]
-VERSION = plannel_conf["version"]
-SERVERS = plannel_conf["servers"]
-server_url_list = SERVERS.split(",")
+config = PlannelConfig()
+server_host_list = config.SERVERS.split(",")
 server_list = []
-for hostAndPort in server_url_list:
+server_dict = dict()
+for server in server_host_list:
+    splitted = server.split(":")
+    alias = splitted[0]
+    host = splitted[1]
+    server_info = dict()
+    server_info["host"] = host
+    server_dict[alias] = server_info
+
+ssh_ports_list = config.SSH_PORTS.split(",")
+for ssh_port in ssh_ports_list:
+    splitted = ssh_port.split(":")
+    alias = splitted[0]
+    port = splitted[1]
+    server_info = server_dict.get(alias)
+    server_info["ssh_port"] = port
+
+docker_ports_list = config.DOCKER_PORTS.split(",")
+for docker_port in docker_ports_list:
+    splitted = docker_port.split(":")
+    alias = splitted[0]
+    port = splitted[1]
+    server_info = server_dict.get(alias)
+    server_info["docker_port"] = port
+
+'''
+for hostAndPort in server_host_list:
     p = '(?:http.*://)?(?P<host>[^:/ ]+).?(?P<port>[0-9]*).*'
     m = re.search(p, hostAndPort)
     host = m.group('host')
@@ -22,9 +43,13 @@ for hostAndPort in server_url_list:
         logging.error("{} is invalid form of host:port string".format(hostAndPort))
         continue
     logging.info("{} is included to managed server list".format(hostAndPort))
-    server = Server(host, port)
-    server_list.append(server)
+'''
+for alias in server_dict:
+    info = server_dict.get(alias)
+    new_server = Server(alias, info["host"], info["ssh_port"], info["docker_port"])
+    logging.info("{} 가 관리대상 서버에 포함됩니다".format(new_server))
+    server_list.append(new_server)
 
-cli = DockerClient(server_list)
-cli.get_all_containers_in_cluster()
-#cli.get_all_containers(9599, True)
+cli = DockerClient(config, server_list)
+print(cli.get_all_containers_in_cluster())
+cli.create_container("helloworld", server_list[0])
