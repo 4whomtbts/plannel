@@ -1,0 +1,9 @@
+self.cli.connect("210.94.223.123", port=8081, username="4whomtbts", password="Hndp^(%#9!Q")
+        stdin, stdout, stderr = self.cli.exec_command("sudo docker ps -a | sed -n '2,$p' | awk '{print $1}'", get_pty=True)
+        lines = stdout.readlines()
+        stderr_lines = stderr.readlines()
+        for line in lines:
+            line = line.replace('\r', '').replace('\n', '')
+            inspect_stdin, inspect_stdout, inspect_stderr =\
+                self.cli.exec_command("sudo docker inspect {}".format(line), get_pty=True)
+            print("inspect_stdout = ", inspect_stdout.readlines())

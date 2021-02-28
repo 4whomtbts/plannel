@@ -6,27 +6,19 @@ from container import Container
 
 class DockerClient:
 
-    def __init__(self, host, sudoer_id, sudoer_pwd, servers):
+    def __init__(self, server_list):
         self.cli = paramiko.SSHClient()
         self.cli.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-        self.host = "210.94.223.123"
+        self.server_list = server_list
         self.cli.close()
         pass
 
     def get_all_containers_in_cluster(self):
-        self.cli.connect("210.94.223.123", port=8081, username="4whomtbts", password="Hndp^(%#9!Q")
-        stdin, stdout, stderr = self.cli.exec_command("sudo docker ps -a | sed -n '2,$p' | awk '{print $1}'", get_pty=True)
-        lines = stdout.readlines()
-        stderr_lines = stderr.readlines()
-        for line in lines:
-            line = line.replace('\r', '').replace('\n', '')
-            inspect_stdin, inspect_stdout, inspect_stderr =\
-                self.cli.exec_command("sudo docker inspect {}".format(line), get_pty=True)
-            print("inspect_stdout = ", inspect_stdout.readlines())
+        for server in self.server_list:
+            self.get_all_containers(server.host, server.port)
 
-
-    def get_all_containers(self, port, all):
-        url = "http://{}:{}/v1.40/containers/json?all=true".format(self.host, port)
+    def get_all_containers(self, host, port):
+        url = "http://{}:{}/v1.40/containers/json?all=true".format(host, port)
         res = requests.get(url)
         if res.status_code is not requests.codes.ok:
             logging.error("get_all_containers 요청 실패 : url - %s, status_code - %s", url, res.status_code)
